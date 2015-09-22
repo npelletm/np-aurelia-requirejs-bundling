@@ -1,194 +1,203 @@
 ﻿'use strict';
 
-var gulp = require('gulp'),
-	extend = require('extend'),
-	config = {
-	  baseUrl: './unzip/',
-	  out: './aurelia-bundle',
-	  paths: {
-		'aurelia-bootstrapper': 'bootstrapper/dist/amd/index',
-		'aurelia-loader-default': 'loader-default/dist/amd/index',
-		'aurelia-path': 'path/dist/amd/index',
-		'aurelia-task-queue': 'task-queue/dist/amd/index',
-		'aurelia-logging': 'logging/dist/amd/index',
-		'aurelia-logging-console': 'logging-console/dist/amd/index',
-		'aurelia-history': 'history/dist/amd/index',
-		'aurelia-history-browser': 'history-browser/dist/amd/index',
-		'aurelia-event-aggregator': 'event-aggregator/dist/amd/index',
-		'aurelia-html-template-element': 'html-template-element/dist/HTMLTemplateElement',
-		'core-js': 'empty:'
-	  },
-
-	  include: [
-		  'aurelia-path',
-		  'aurelia-loader',
-		  'aurelia-loader-default',
-		  'aurelia-task-queue',
-		  'aurelia-logging',
-		  'aurelia-logging-console',
-		  'aurelia-history',
-		  'aurelia-history-browser',
-		  'aurelia-event-aggregator',
-		  'aurelia-framework',
-		  'aurelia-metadata',
-		  'aurelia-binding',
-		  'aurelia-templating',
-		  'aurelia-dependency-injection',
-		  'aurelia-router',
-		  'aurelia-templating-binding',
-		  'aurelia-templating-resources',
-		  'aurelia-templating-router',
-		  'aurelia-route-recognizer',
-		  'aurelia-http-client',
-		  'aurelia-bootstrapper',
-		  'aurelia-html-template-element',
-		  'aurelia-validation'
-	  ],
-	  
-	  packages : [
-		{
-		  name: 'aurelia-loader',
-		  location: 'loader/dist/amd',
-		  main : 'index'
-		},
-	   {
-		 name: 'aurelia-framework',
-		 location: 'framework/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-metadata',
-		 location: 'metadata/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-binding',
-		 location: 'binding/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-templating',
-		 location: 'templating/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-dependency-injection',
-		 location: 'dependency-injection/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-router',
-		 location: 'router/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-templating-binding',
-		 location: 'templating-binding/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-templating-resources',
-		 location: 'templating-resources/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-templating-router',
-		 location: 'templating-router/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-route-recognizer',
-		 location: 'route-recognizer/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-http-client',
-		 location: 'http-client/dist/amd',
-		 main : 'index'
-	   },
-	   {
-		 name: 'aurelia-validation',
-		 location: 'validation/dist/amd',
-		 main : 'index'
-	   }
-	   ],
-		wrap: {
-			startFile: ["versions.txt"],
-			endFile: []
-		}
-	};	
-
-function fixConfig(ext, baseUrl) {
-	if (ext===undefined) ext = '.js';
-	if (baseUrl===undefined) baseUrl = './unzip/';
+var gulp = require('gulp') ;
 	
-	var cfg = extend(true, {}, config);
-	
-	cfg.baseUrl = baseUrl;
-	cfg.out = cfg.out + ext;
-	cfg.wrap.startFile = baseUrl + config.wrap.startFile;
-	
-	return cfg;
-}	
 
-function build(ext, baseUrl) {
-	var rjs = require('gulp-requirejs'),
-		cfg = fixConfig(ext, baseUrl);
+
+//based on aurelia skeleton navigation app (https://github.com/aurelia/skeleton-navigation/blob/master/config.js), last update date : 2015-09-17 
+var aureliaRepos = [
+		//begin https://github.com/aurelia/registry/blob/master/core-registry.json
+		"binding",
+		"bootstrapper",
+		"dependency-injection",
+		"event-aggregator",
+		"framework",
+		"history",
+		"history-browser",
+		"http-client",
+		"loader",
+		"loader-default",
+		"logging",
+		"logging-console", 
+		"metadata",
+		"path",
+		"router",
+		"route-recognizer",
+		"task-queue",
 		
-	rjs(cfg)
-		.pipe(gulp.dest('./')); // pipe it to the output DIR
-}	
-
-function build_min(ext, baseUrl) {
-	var rjs = require('gulp-requirejs'),
-		uglify = require('gulp-uglify'),
-		sourcemaps = require('gulp-sourcemaps'),
-		cfg = fixConfig(ext, baseUrl);
-
-	rjs(cfg)
-		.pipe(sourcemaps.init())
-		.pipe(uglify())
-		.pipe(sourcemaps.write('./', {includeContent:false}))
-		.pipe(gulp.dest('./')); // pipe it to the output DIR
-}
-	
-gulp.task('build', function () { build(); } );
-gulp.task('build-min', function() {	build_min('.min.js'); });
-gulp.task('build-latest', function () { build('-latest.js', './unzip-master/'); } );
-gulp.task('build-latest-min', function() {	build_min('-latest.min.js', './unzip-master/'); });
+		"templating",
+		"templating-binding",
+		"templating-resources",
+		"templating-router",
+		//end https://github.com/aurelia/registry/blob/master/core-registry.json
+		 
+		"html-template-element", //A polyfill for the HTMLTemplate element extracted and decoupled from Polymer.
+		//"html-import-template-loader", //add % skeleton, Use HTMLImport technology to load views.(extract from polylmer HTMLImport)
+		
+		//plugins--------------
+		"animator-css", //An implementation of the abstract Animator interface from templating which enables css-based animations.
+		//"validation", //Validation plugin
+		
+	];
 
 gulp.task('download', function() {
-	return require('./download')({
-		zips: './zips',
-		zipsMaster: './zips-master',
-		unZip: './unzip',
-		unZipMaster: './unzip-master',
-		repos: [
-			"binding",
-			"bootstrapper",
-			"dependency-injection",
-			"event-aggregator",
-			"framework",
-			"history",
-			"history-browser",
-			"html-template-element",
-			"http-client",
-			"loader",
-			"loader-default",
-			"logging",
-			"logging-console",
-			"metadata",
-			"path",
-			"route-recognizer",
-			"router",
-			"task-queue",
-			"templating",
-			"templating-binding",
-			"templating-resources",
-			"templating-router",
-			"validation"
-		]
+	return require('./tasks/download')({
+		host: 'github.com',
+		owner: 'aurelia',
+		protocol: 'https',
+		
+		zips: './dwn/zips',
+		zipsMaster: './dwn/zips-master',
+		unZip: './dwn/unzip',
+		unZipMaster: './dwn/unzip-master',
+		
+		repos: aureliaRepos
 	});
 });
 
-gulp.task('default', ['build', 'build-min', 'build-latest', 'build-latest-min']);
+//########################
+
+var aureliaRjsConfig =  {
+	out: './aurelia-bundle', //relative to out
+	paths: {
+		'aurelia-binding' : 'binding/dist/amd/aurelia-binding',
+		'aurelia-bootstrapper': 'bootstrapper/dist/amd/aurelia-bootstrapper',
+		'aurelia-dependency-injection': 'dependency-injection/dist/amd/aurelia-dependency-injection',
+		'aurelia-event-aggregator': 'event-aggregator/dist/amd/aurelia-event-aggregator',
+		'aurelia-framework': 'framework/dist/amd/aurelia-framework',
+		'aurelia-history': 'history/dist/amd/aurelia-history',
+		'aurelia-history-browser': 'history-browser/dist/amd/aurelia-history-browser',
+		'aurelia-http-client': 'http-client/dist/amd/aurelia-http-client',
+		'aurelia-loader': 'loader/dist/amd/aurelia-loader',
+		'aurelia-loader-default': 'loader-default/dist/amd/aurelia-loader-default',
+		'aurelia-logging': 'logging/dist/amd/aurelia-logging',
+		'aurelia-logging-console': 'logging-console/dist/amd/aurelia-logging-console',
+		'aurelia-metadata': 'metadata/dist/amd/aurelia-metadata',
+		'aurelia-path': 'path/dist/amd/aurelia-path',
+		'aurelia-router': 'router/dist/amd/aurelia-router',
+		'aurelia-route-recognizer': 'route-recognizer/dist/amd/aurelia-route-recognizer',
+		'aurelia-task-queue': 'task-queue/dist/amd/aurelia-task-queue',
+		
+		'aurelia-templating':  'templating/dist/amd/aurelia-templating',
+		'aurelia-templating-binding': 'templating-binding/dist/amd/aurelia-templating-binding',
+		
+		'aurelia-html-template-element': 'html-template-element/dist/HTMLTemplateElement',
+		
+		'aurelia-animator-css': 'animator-css/dist/amd/aurelia-animator-css',
+		'core-js': 'empty:'
+	},
+	packages : [
+		{
+			name: 'aurelia-templating-resources',
+			location: 'templating-resources/dist/amd',
+			main : 'aurelia-templating-resources'
+		},
+		{
+			name: 'aurelia-templating-router',
+			location: 'templating-router/dist/amd',
+			main : 'aurelia-templating-router'
+		},
+		// {
+		//  name: 'aurelia-validation',
+		//  location: 'validation/dist/amd',
+		//  main : 'index'
+		// },
+	],
+	
+	include: [
+		//begin https://github.com/aurelia/registry/blob/master/core-registry.json
+		'aurelia-path',
+		'aurelia-loader',
+		'aurelia-loader-default',
+		'aurelia-task-queue',
+		'aurelia-logging',
+		'aurelia-logging-console',
+		'aurelia-history',
+		'aurelia-history-browser',
+		'aurelia-event-aggregator',
+		'aurelia-framework',
+		'aurelia-metadata',
+		'aurelia-binding',
+		'aurelia-templating',
+		'aurelia-dependency-injection',
+		'aurelia-router',
+		'aurelia-templating-binding',
+		'aurelia-templating-resources',
+		'aurelia-templating-router',
+		'aurelia-route-recognizer',
+		'aurelia-http-client',
+		'aurelia-bootstrapper', 
+		//end https://github.com/aurelia/registry/blob/master/core-registry.json
+		
+		'aurelia-html-template-element',
+		'aurelia-animator-css'
+		//'aurelia-validation',
+	],
+	wrap: {
+		startFile: ["versions.txt"],
+		endFile: []
+	}
+};	
+
+//tasks 
+gulp.task('build', function () { 
+	return require('./tasks/build-bundle')({
+		config : aureliaRjsConfig,
+		ext : '.js',
+		baseUrl: './dwn/unzip/',
+		min : false,
+		out : './out/'
+	});
+});
+
+gulp.task('build-min', function () { 
+	return require('./tasks/build-bundle')({
+		config : aureliaRjsConfig,
+		ext : '.min.js',
+		baseUrl: './dwn/unzip/',
+		min : true,
+		out : './out/'
+	});
+});
+
+gulp.task('build-latest', function () { 
+	return require('./tasks/build-bundle')({
+		config : aureliaRjsConfig,
+		ext : '-latest.js',
+		baseUrl: './dwn/unzip-master/',
+		min : false,
+		out : './out/'
+	});
+});
+
+gulp.task('build-latest-min', function () { 
+	return require('./tasks/build-bundle')({
+		config : aureliaRjsConfig,
+		ext : '-latest.min.js',
+		baseUrl: './dwn/unzip-master/',
+		min : true,
+		out : './out/'
+	});
+});
+
+gulp.task('build-all', ['build', 'build-min', 'build-latest', 'build-latest-min']);
+
+
+//clean
+gulp.task('clean-build', function() {
+	return require('./tasks/clean')({
+		dirs : ['./out']
+	});
+});
+gulp.task('clean-download', function() {
+	return require('./tasks/clean')({
+		dirs : ['./out', './dwn']
+	});
+});
+
+gulp.task('clean-all', ['clean-build', 'clean-download']);
+
+//###############
+
+//default task
+gulp.task('default', ['build-all']);

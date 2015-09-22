@@ -1,6 +1,6 @@
 {
   "name": "bundle",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bundle Aurelia`s modules to use it with requirejs",
   "main": "none",
   "scripts": {
@@ -8,20 +8,22 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/luboid/aurelia-requirejs-bundling.git"
+    "url": "https://github.com/npelletm/aurelia-requirejs-bundling.git"
   },
   "keywords": [
     "Aurelia",
     "requirejs"
   ],
-  "author": "LyubomirIL",
+  "author": "npelletm",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/luboid/aurelia-requirejs-bundling/issues"
+    "url": "https://github.com/npelletm/aurelia-requirejs-bundling/issues"
   },
-  "homepage": "https://github.com/luboid/aurelia-requirejs-bundling",
+  "homepage": "https://github.com/npelletm/aurelia-requirejs-bundling",
   "devDependencies": {
+    "gulp":"^3.9.0",
     "async": "^1.2.0",
+    "mkdirp":"^0.5.1",
     "event-stream": "^3.3.1",
     "extend": "^2.0.1",
     "gulp-requirejs": "^0.1.3",

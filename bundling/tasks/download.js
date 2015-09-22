@@ -1,16 +1,21 @@
+/// <reference path="../typings/tsd.d.ts" />
 'use strict';
 
-var host = 'github.com', owner = 'aurelia', protocol = 'https';
-
-module.exports = function download(options) {		
-var async = require("async"),
-	unzip = require("unzip"),
-	fs = require("fs"), 
-	path = require('path'),
-	Promise = require('promise'),
-	endOfLine = require('os').EOL,
-	ps = require("event-stream").pause(),
-	request = require("request");
+module.exports = function download(options) {
+	
+	var async = require("async"),
+		unzip = require("unzip"),
+		fs = require("fs"),
+		path = require('path'),
+		mkdirp = require('mkdirp'),
+		Promise = require('promise'),
+		endOfLine = require('os').EOL,
+		ps = require("event-stream").pause(),
+		request = require("request");
+		
+	var host = options.host || 'github.com',
+		owner = options.owner,
+		protocol = options.protocol || 'https';
 	
 	function ensureDirectories() {
 		console.info('create directories structure ...');
@@ -61,7 +66,8 @@ var async = require("async"),
 						reject(e);
 					} 
 					else {
-						fs.mkdir(dir, function(e, result){
+						//mkdir multi-level
+						mkdirp(dir, function(e, result){
 							if (e) {
 								reject(e);
 							}
@@ -72,7 +78,7 @@ var async = require("async"),
 				});
 			});
 		}
-		
+
 		for (var i in dirs) {
 			dirs[i] = __dir(dirs[i]);
 		}
@@ -97,10 +103,14 @@ var async = require("async"),
 		else {
 			versions = versions.map(function(item){
 				item = item.split('.');
-				return parseInt(item[0],10)*1000000 +
-					parseInt(item[1],10)*1000 +
-					parseInt(item[2],10);
-			}).sort();
+				return parseInt(item[0], 10)*1000000 +
+					parseInt(item[1], 10)*1000 +
+					parseInt(item[2], 10);
+			}).sort(function(x, y) {
+				return x < y ? x : y ; 
+			});
+			
+			//console.info('Versions:' + versions.join(', '));
 			
 			ver = versions[versions.length -1]
 			mod = ver % 1000000;
@@ -241,7 +251,7 @@ var async = require("async"),
 				
 				var versionHeader = [], repo, dte = new Date();
 				versionHeader.push("/*");
-				versionHeader.push(" * Aurelia`s modules version at " + dte);
+				versionHeader.push(" * Aurelia`s modules version at " + dte.toISOString());
 				for(var i in items) {
 					repo = items[i];
 					versionHeader.push(" * " + repo.name +'@'+ repo.version);
@@ -249,7 +259,7 @@ var async = require("async"),
 				versionHeader.push(" */");
 				
 				fs.appendFileSync(options.unZip + '/versions.txt', versionHeader.join(endOfLine));
-				fs.appendFileSync(options.unZipMaster + '/versions.txt', "// Aurelia`s modules latest version at " + dte);
+				fs.appendFileSync(options.unZipMaster + '/versions.txt', "// Aurelia`s modules latest version at " + dte.toISOString());
 				
 				callback();
 			}
@@ -266,6 +276,8 @@ var async = require("async"),
 			}
 		});		
 	}
+	
+	//main task
 	
 	ensureDirectories()
 		.then(queueRequestForVersions, function(error) {

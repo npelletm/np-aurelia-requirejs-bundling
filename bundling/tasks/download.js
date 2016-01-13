@@ -19,6 +19,7 @@ module.exports = function download(options) {
 	
 	function ensureDirectories() {
 		console.info('create directories structure ...');
+		
 		// https://github.com/smhanov/node-promise-sequence
 		var dirs = [options.zips, options.zipsMaster, options.unZip, options.unZipMaster];
 	
@@ -84,44 +85,67 @@ module.exports = function download(options) {
 		}
 
 		return Promise.all(dirs).then(function() {
-			console.info('ok');
+			console.info('dirs ok');
 		});
 	}
 	
 	function extract_version(repo, body) {
 		var matches, 
-			versions = [], 
-			regEx = new RegExp('href="/' + owner + '/' + repo + '/archive/(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}).zip"', 'ig'),
-			ver, mod, i0, i1, versionInfo;
-			
-		while (matches = regEx.exec(body))
-			versions.push(matches[1]);
+			matchVersionInfos = [], selectedVersionInfo, 
+			regEx = new RegExp('href="/' + owner + '/' + repo + '/archive/(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\-beta\\.)?(\\d{1,2})(\\.\\d{1,2})?(\\.\\d{1,2})?.zip"', 'ig');
+			//npe 2015-11-23 : add beta prefix : "x.y.z-beta."
+		var	builtVer, prefix, verFull, mod, i0, i1, versionInfo;
+		var numVersions, numVersion;
 		
-		if (versions.length === 1 || versions.length === 0) {
-			versionInfo = {name: repo, version: (versions[0] || '')};
+		while (matches = regEx.exec(body)) {
+			//console.log('len:' + matches.length);
+			//matches[0] : ignore
+			//matches[1] : beta prefix
+			prefix = matches[1] || '';
+			//console.log('prefix:' + prefix);
+			//matches[2..n] : version 
+			builtVer = matches.splice(2).join("");
+			//console.log('ver:' + builtVer);
+			matchVersionInfos.push( { prefix: prefix, ver: builtVer} );
+		} 
+		
+		
+		if (matchVersionInfos.length === 1 || matchVersionInfos.length === 0) {
+			versionInfo = {name: repo, prefix: matchVersionInfos[0].prefix, version: (matchVersionInfos[0].ver || '')};
 		}
-		else {
-			versions = versions.map(function(item){
-				item = item.split('.');
-				return parseInt(item[0], 10)*1000000 +
-					parseInt(item[1], 10)*1000 +
-					parseInt(item[2], 10);
+		else  {
+			matchVersionInfos.forEach(function(item) {
+				var verStr;
+				verStr = item.ver.split('.');
+				numVersion = parseInt(verStr[0], 10)*1000000 +
+					(verStr[1] ? parseInt(verStr[1], 10)*1000  : 0) +
+					(verStr[2] ? parseInt(verStr[2], 10) : 0);
+				item.numVersion = numVersion;
+			});
+			
+		 	numVersions = matchVersionInfos.map(function(item){
+				return  item.numVersion;
 			}).sort(function(x, y) {
 				return x < y ? x : y ; 
 			});
+			numVersion = numVersions[numVersions.length -1];
+			//console.log('selected numVersion:' + numVersion);
+			selectedVersionInfo  = matchVersionInfos.filter(function(it) {
+				return it.numVersion === numVersion;
+			})[0];
+			//console.log('selectedVersionInfo:' + selectedVersionInfo);
 			
-			//console.info('Versions:' + versions.join(', '));
+			mod = numVersion % 1000000;
+			i0 = (numVersion - mod) / 1000000;
+
+			numVersion = mod;
+			mod = numVersion % 1000;
+			i1 = (numVersion - mod) / 1000;
 			
-			ver = versions[versions.length -1]
-			mod = ver % 1000000;
-			i0 = (ver - mod) / 1000000;
-
-			ver = mod;
-			mod = ver % 1000;
-
-			i1 = (ver - mod) / 1000;
-
-			versionInfo = {name: repo, version: (i0 + "." + i1 + "." + mod)};
+			verFull = i0 + "." + i1 + "." + mod;
+			//console.log('selected ver (full):' + verFull);
+				
+			versionInfo = { name: repo, versionPrefix: selectedVersionInfo.prefix , version: selectedVersionInfo.ver};
 		}
 		return versionInfo;
 	}
@@ -129,25 +153,26 @@ module.exports = function download(options) {
 	function get_repo_release(repo, callback) {
 		console.info('request version for ' + repo + ' ...');
 		
-		var url = protocol + '://' + host + '/' +owner+ '/' +repo+ '/tags';
+		var url = protocol + '://' + host + '/' + owner + '/' + repo + '/tags';
 		
 		request.get(url, function(error, response, body) {
 		  if (!error && response.statusCode == 200) {
 			var versionInfo = extract_version(repo, body);
-			console.info(versionInfo.version || 'none');
+			console.info('selected version:' + versionInfo.versionPrefix + (versionInfo.version || 'none'));
 			callback(null, versionInfo);
 		  }
 		  else {
-			callback(error || ('Request for [' +url+ '] ended with status code: '+response.statusCode+'.'));
+			callback(error || ('Request for [' + url + '] ended with status code: ' + response.statusCode + '.'));
 		  }
 		});
 	}
 	
 	function download_repo_release(repo, callback) {
-		var url = protocol + '://' + host + '/' +owner+ '/' +repo.name+ '/archive/' + repo.version + ".zip",
+		var url = protocol + '://' + host + '/' +owner+ '/' +repo.name+ '/archive/' + repo.versionPrefix + repo.version + ".zip",
 			dest = (repo.version === 'master' ? options.zipsMaster : options.zips) + '/' + repo.name + '.zip';
-		
-		console.info('downloading ... ' + repo.name +' ('+ repo.version + ')');
+			
+		console.log('download url:' + url);
+		console.info('downloading ... ' + repo.name +' (' + repo.versionPrefix + repo.version + ')');
 		
 		var file = fs.createWriteStream(dest);
 		
@@ -162,6 +187,7 @@ module.exports = function download(options) {
 		});
 		
 		file.on('error', function (e) {
+			console.error('ko' + e);
 			fs.unlink(dest); // Delete the file async. (But we don't check the result)
 			callback(e, null);
 		});
@@ -170,7 +196,7 @@ module.exports = function download(options) {
 	function unzip_repo(repo, callback) {
 		console.info('unziping ... ' + repo.dest);
 		fs.createReadStream(repo.dest)
-			.pipe(unzip.Extract({ path: (repo.version==='master'?options.unZipMaster:options.unZip) + '/' }))
+			.pipe(unzip.Extract({ path: (repo.version==='master' ? options.unZipMaster : options.unZip) + '/' }))
 			.on('close', function () {
 				console.info('ok');
 				callback(null, repo);
@@ -178,16 +204,23 @@ module.exports = function download(options) {
 			.on('error', callback);
 	}
 	
-	function renameFiles(location) {
-		var dirs = fs.readdirSync(location), dir;
+	function renameFiles(location, repoItems) {
+		var dirs = fs.readdirSync(location), dir, newDir, repoItem;
 		for(var i in dirs) {
 			dir = dirs[i];
-			dir = dir.substr(0, dir.lastIndexOf('-'));
-			if (dir) {
-				fs.renameSync(location + '/' + dirs[i], location + '/' + dir);
+			console.log('dir:' + dir);
+			repoItem = repoItems.filter(function (it) {
+				var builtDir = it.name + '-' + it.versionPrefix + it.version;
+				//console.log('builtDir:' + builtDir);
+				return builtDir === dir;
+			})[0];
+			newDir = repoItem.name ;//dir.substr(0, dir.lastIndexOf('-'));
+			if (newDir) {
+				fs.renameSync(location + '/' + dir, location + '/' + newDir);
 			}
 		}
 	}
+	
 	
 	function queueRequestForVersions() {
 		var buffer = [];
@@ -209,7 +242,7 @@ module.exports = function download(options) {
 		var buffer = [];
 		for(var i in repos) {
 			buffer.push(download_repo_release.bind(null, repos[i]));
-			buffer.push(download_repo_release.bind(null, {name:repos[i].name,version:'master'}));
+			buffer.push(download_repo_release.bind(null, { name:repos[i].name, versionPrefix:'', version:'master'}));
 		}
 		
 		async.series(buffer, function (error, result) {
@@ -242,19 +275,22 @@ module.exports = function download(options) {
 		async.series([function (callback) {
 			console.info('rename directories & save versions ...')
 			try {
-				renameFiles(options.unZip);
-				renameFiles(options.unZipMaster);
-
-				var items = repos.filter(function(item) {
+				var repoItems = repos.filter(function(item) {
 					return item.version !== 'master';
 				});
+				renameFiles(options.unZip, repoItems);
 				
-				var versionHeader = [], repo, dte = new Date();
+				var repoMasterItems = repos.filter(function(item) {
+					return item.version === 'master';
+				});
+				renameFiles(options.unZipMaster, repoMasterItems);
+
+				var versionHeader = [], repoItem, dte = new Date();
 				versionHeader.push("/*");
 				versionHeader.push(" * Aurelia`s modules version at " + dte.toISOString());
-				for(var i in items) {
-					repo = items[i];
-					versionHeader.push(" * " + repo.name +'@'+ repo.version);
+				for(var i in repoItems) {
+					repoItem = repoItems[i];
+					versionHeader.push(" * " + repoItem.name +'@'+ repoItem.versionPrefix + repoItem.version);
 				}
 				versionHeader.push(" */");
 				
@@ -277,12 +313,27 @@ module.exports = function download(options) {
 		});		
 	}
 	
-	//main task
+ 	//main task
+	 ensureDirectories()
+	 	.then(queueRequestForVersions, function(error) {
+	 		ps.emit('error', error);
+	 	});
 	
-	ensureDirectories()
-		.then(queueRequestForVersions, function(error) {
-			ps.emit('error', error);
-		});
+	// //main task
+	// async.series([
+	// 	function(callback){
+	// 		// do some stuff ... 
+	// 		ensureDirectories(null, 'dirs');
+	// 	},
+	// 	function(callback){
+	// 		// do some more stuff ... 
+	// 		callback(null, 'two');
+	// 	}
+	// ],
+	// // optional callback 
+	// function(err, results){
+	// 	// results is now equal to ['one', 'two'] 
+	// });
 
 	return ps;	
 }

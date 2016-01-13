@@ -24,7 +24,8 @@ var aureliaRepos = [
 		"router",
 		"route-recognizer",
 		"task-queue",
-		
+		"pal", //add 2015-10-20
+		"pal-browser", //add 2015-10-20
 		"templating",
 		"templating-binding",
 		"templating-resources",
@@ -77,7 +78,8 @@ var aureliaRjsConfig =  {
 		'aurelia-router': 'router/dist/amd/aurelia-router',
 		'aurelia-route-recognizer': 'route-recognizer/dist/amd/aurelia-route-recognizer',
 		'aurelia-task-queue': 'task-queue/dist/amd/aurelia-task-queue',
-		
+		'aurelia-pal': 'pal/dist/amd/aurelia-pal', //add 2015-10-20
+		'aurelia-pal-browser': 'pal-browser/dist/amd/aurelia-pal-browser', //add 2015-10-20
 		'aurelia-templating':  'templating/dist/amd/aurelia-templating',
 		'aurelia-templating-binding': 'templating-binding/dist/amd/aurelia-templating-binding',
 		
@@ -116,6 +118,8 @@ var aureliaRjsConfig =  {
 		'aurelia-history-browser',
 		'aurelia-event-aggregator',
 		'aurelia-framework',
+		'aurelia-pal',//add 2015-10-20
+		'aurelia-pal-browser',//add 2015-10-20
 		'aurelia-metadata',
 		'aurelia-binding',
 		'aurelia-templating',
